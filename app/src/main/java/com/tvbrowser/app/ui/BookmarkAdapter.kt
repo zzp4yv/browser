@@ -31,7 +31,8 @@ class BookmarkAdapter(
     }
 
     override fun onBindViewHolder(holder: TileHolder, position: Int) {
-        when (val tile = tiles[position]) {
+        val tile = tiles[position]
+        when (tile) {
             is HomeTile.Site -> {
                 holder.title.text = tile.bookmark.name
                 holder.subtitle.text = tile.bookmark.url
