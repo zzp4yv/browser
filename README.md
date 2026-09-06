@@ -32,18 +32,37 @@ adb install -r TVBrowser-android-tv.apk
 
 ## Controles do remoto
 
-| Botão | Ação |
-|---|---|
-| ▲ (seta cima), fora do vídeo | Mostra/esconde a barra (voltar, avançar, recarregar, início, favoritar, endereço) |
-| ◀ / ▶ com vídeo em tela cheia | Retrocede / avança 10 segundos |
-| OK / Enter com vídeo em tela cheia | Reproduzir / pausar |
-| Botões dedicados de mídia (▶⏸, ⏪, ⏩) | Funcionam em qualquer tela, mesmo fora da tela cheia |
-| Voltar | Sai da tela cheia → volta página → volta à tela inicial |
-| Menu | Mostra/esconde a barra de navegação |
+Navegar em páginas comuns (fora da reprodução em tela cheia) usa um
+**cursor de ponteiro na tela**, em vez de depender da navegação por foco de
+cada site — muitos sites (grades de vídeo, players customizados) simplesmente
+não têm foco navegável por teclado, e mesmo quando têm, o foco fica
+invisível. O cursor sempre aparece na tela, então você sempre sabe onde está:
+
+| Botão | Ação (navegação normal) | Ação (vídeo em tela cheia) |
+|---|---|---|
+| ◀ ▲ ▶ ▼ | Move o cursor na tela (acelera se segurar) | Avança/retrocede 10s (◀ ▶) |
+| OK / Enter | Clica na posição do cursor | Reproduz / pausa |
+| Botões dedicados de mídia (▶⏸, ⏪, ⏩) | Funcionam em qualquer tela |  |
+| Menu | Mostra/esconde a barra (voltar, avançar, recarregar, início, favoritar, versão desktop, endereço) |  |
+| Voltar | Volta página → volta à tela inicial | Sai da tela cheia |
+
+Ao chegar perto da borda da tela, o cursor "empurra" o conteúdo (a página
+rola) em vez de sumir de vista — assim dá para alcançar qualquer parte de
+uma página longa sem perder a posição do cursor.
 
 Na tela inicial, use o D-pad para navegar entre os atalhos, "+" para adicionar
 um novo site e "🔎 Abrir endereço" para digitar uma URL ou termo de busca.
 Pressione e segure OK sobre um atalho adicionado por você para removê-lo.
+
+## Versão desktop
+
+Por padrão, o navegador se identifica para os sites como um Chrome de
+computador (não como TV/celular), para receber a versão completa (desktop)
+do site em vez de uma versão mobile simplificada — isso costuma ter mais
+opções de player e menos limitações de vídeo. Pressione **Menu** e depois
+**"Versão desktop"** para alternar entre desktop/padrão a qualquer momento;
+a escolha fica salva e vale para todas as próximas páginas e reaberturas do
+app, até você alternar de novo.
 
 ## Bloqueio de anúncios
 

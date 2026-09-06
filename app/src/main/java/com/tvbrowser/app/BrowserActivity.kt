@@ -5,8 +5,10 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Message
+import android.os.SystemClock
 import android.util.Patterns
 import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
@@ -18,6 +20,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.EditText
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -27,13 +30,17 @@ import androidx.appcompat.app.AppCompatActivity
 import com.tvbrowser.app.adblock.AdBlockManager
 import com.tvbrowser.app.model.Bookmark
 import com.tvbrowser.app.model.BookmarkStore
+import com.tvbrowser.app.model.BrowserSettings
 import java.io.ByteArrayInputStream
+import kotlin.math.min
 
 /**
  * A single full-screen WebView acting as the "player". Ad hosts are dropped
- * at the network layer (see [tvWebViewClient]); everything else about this
- * screen exists to make video playback controllable from a D-pad remote
- * with no touchscreen and no keyboard.
+ * at the network layer (see [tvWebViewClient]). Everything else about this
+ * screen exists to make an arbitrary website - not just well-behaved ones -
+ * controllable from a D-pad remote with no touchscreen and no keyboard: a
+ * visible on-screen cursor the D-pad moves and OK "taps", instead of relying
+ * on each site's own (often absent) keyboard/focus navigation.
  */
 class BrowserActivity : AppCompatActivity() {
 
@@ -41,30 +48,42 @@ class BrowserActivity : AppCompatActivity() {
     private lateinit var progressBar: ProgressBar
     private lateinit var overlayToolbar: LinearLayout
     private lateinit var adsBlockedBadge: TextView
-    private lateinit var playerHelpHint: TextView
+    private lateinit var hintText: TextView
     private lateinit var fullscreenContainer: FrameLayout
+    private lateinit var pointerCursor: ImageView
     private lateinit var store: BookmarkStore
+    private lateinit var settings: BrowserSettings
+
+    private var defaultUserAgent: String = ""
 
     private var customView: View? = null
     private var customViewCallback: WebChromeClient.CustomViewCallback? = null
     private val isInFullscreenVideo: Boolean get() = customView != null
 
     private var toolbarVisible = false
+    private var cursorHintShown = false
+
+    // Cursor position, in WebView-local pixels.
+    private var cursorX = 0f
+    private var cursorY = 0f
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_browser)
         store = BookmarkStore(this)
+        settings = BrowserSettings(this)
 
         webView = findViewById(R.id.webView)
         progressBar = findViewById(R.id.progressBar)
         overlayToolbar = findViewById(R.id.overlayToolbar)
         adsBlockedBadge = findViewById(R.id.adsBlockedBadge)
-        playerHelpHint = findViewById(R.id.playerHelpHint)
+        hintText = findViewById(R.id.playerHelpHint)
         fullscreenContainer = findViewById(R.id.fullscreenContainer)
+        pointerCursor = findViewById(R.id.pointerCursor)
 
         setupWebView()
         setupToolbar()
+        initCursor()
 
         val url = intent.getStringExtra(EXTRA_URL) ?: "https://www.google.com"
         webView.loadUrl(url)
@@ -86,6 +105,9 @@ class BrowserActivity : AppCompatActivity() {
             builtInZoomControls = false
             displayZoomControls = false
         }
+        defaultUserAgent = webView.settings.userAgentString
+        applyUserAgent(reload = false)
+
         webView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             webView.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, true)
@@ -93,6 +115,15 @@ class BrowserActivity : AppCompatActivity() {
 
         webView.webViewClient = tvWebViewClient()
         webView.webChromeClient = tvWebChromeClient()
+    }
+
+    private fun applyUserAgent(reload: Boolean) {
+        webView.settings.userAgentString = if (settings.desktopMode) {
+            BrowserSettings.DESKTOP_USER_AGENT
+        } else {
+            defaultUserAgent
+        }
+        if (reload) webView.reload()
     }
 
     // -------------------------------------------------------------------
@@ -129,6 +160,7 @@ class BrowserActivity : AppCompatActivity() {
             progressBar.visibility = View.GONE
             injectPlayerHelper()
             showAdsBlockedBadge()
+            maybeShowCursorHint()
         }
     }
 
@@ -151,8 +183,9 @@ class BrowserActivity : AppCompatActivity() {
             )
             fullscreenContainer.visibility = View.VISIBLE
             webView.visibility = View.GONE
+            pointerCursor.visibility = View.GONE
             enterImmersiveMode()
-            showPlayerHint()
+            showHint(getString(R.string.player_help))
         }
 
         override fun onHideCustomView() {
@@ -160,6 +193,7 @@ class BrowserActivity : AppCompatActivity() {
             fullscreenContainer.removeView(view)
             fullscreenContainer.visibility = View.GONE
             webView.visibility = View.VISIBLE
+            pointerCursor.visibility = View.VISIBLE
             customView = null
             customViewCallback?.onCustomViewHidden()
             customViewCallback = null
@@ -226,6 +260,79 @@ class BrowserActivity : AppCompatActivity() {
     }
 
     // -------------------------------------------------------------------
+    // D-pad pointer emulation: a visible cursor the D-pad moves and OK taps.
+    // This is what makes arbitrary sites (video grids, custom players with
+    // no keyboard support) usable, instead of relying on each page's own
+    // (often missing) focus/keyboard handling.
+    // -------------------------------------------------------------------
+
+    private fun initCursor() {
+        webView.post {
+            cursorX = webView.width / 2f
+            cursorY = webView.height / 2f
+            updateCursorView()
+        }
+    }
+
+    private fun dp(value: Float): Float = value * resources.displayMetrics.density
+
+    private fun cursorStep(event: KeyEvent): Float {
+        val acceleration = min(event.repeatCount, 15) * dp(4f)
+        return dp(20f) + acceleration
+    }
+
+    private fun moveCursor(dx: Float, dy: Float) {
+        val width = webView.width.toFloat()
+        val height = webView.height.toFloat()
+        if (width <= 0f || height <= 0f) return
+
+        val edge = CURSOR_EDGE_MARGIN_DP * resources.displayMetrics.density
+
+        var newX = cursorX + dx
+        if (dx < 0 && newX < edge) {
+            webView.scrollBy(dx.toInt(), 0)
+            newX = cursorX
+        } else if (dx > 0 && newX > width - edge) {
+            webView.scrollBy(dx.toInt(), 0)
+            newX = cursorX
+        }
+
+        var newY = cursorY + dy
+        if (dy < 0 && newY < edge) {
+            webView.scrollBy(0, dy.toInt())
+            newY = cursorY
+        } else if (dy > 0 && newY > height - edge) {
+            webView.scrollBy(0, dy.toInt())
+            newY = cursorY
+        }
+
+        cursorX = newX.coerceIn(0f, width)
+        cursorY = newY.coerceIn(0f, height)
+        updateCursorView()
+    }
+
+    private fun updateCursorView() {
+        pointerCursor.x = webView.x + cursorX - CURSOR_HOTSPOT_OFFSET_DP * resources.displayMetrics.density
+        pointerCursor.y = webView.y + cursorY - CURSOR_HOTSPOT_OFFSET_DP * resources.displayMetrics.density
+    }
+
+    private fun clickAtCursor() {
+        val downTime = SystemClock.uptimeMillis()
+        val down = MotionEvent.obtain(downTime, downTime, MotionEvent.ACTION_DOWN, cursorX, cursorY, 0)
+        val up = MotionEvent.obtain(downTime, downTime + 60, MotionEvent.ACTION_UP, cursorX, cursorY, 0)
+        webView.dispatchTouchEvent(down)
+        webView.dispatchTouchEvent(up)
+        down.recycle()
+        up.recycle()
+    }
+
+    private fun maybeShowCursorHint() {
+        if (cursorHintShown || isInFullscreenVideo) return
+        cursorHintShown = true
+        showHint(getString(R.string.cursor_help))
+    }
+
+    // -------------------------------------------------------------------
     // Fullscreen / immersive mode
     // -------------------------------------------------------------------
 
@@ -248,11 +355,12 @@ class BrowserActivity : AppCompatActivity() {
         window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LAYOUT_STABLE
     }
 
-    private fun showPlayerHint() {
-        playerHelpHint.visibility = View.VISIBLE
-        playerHelpHint.animate().setStartDelay(4000).alpha(0f).withEndAction {
-            playerHelpHint.visibility = View.GONE
-            playerHelpHint.alpha = 1f
+    private fun showHint(text: String) {
+        hintText.text = text
+        hintText.visibility = View.VISIBLE
+        hintText.animate().setStartDelay(4000).alpha(0f).withEndAction {
+            hintText.visibility = View.GONE
+            hintText.alpha = 1f
         }.start()
     }
 
@@ -268,7 +376,7 @@ class BrowserActivity : AppCompatActivity() {
     }
 
     // -------------------------------------------------------------------
-    // Overlay toolbar (Back / Forward / Reload / Home / Bookmark / URL)
+    // Overlay toolbar (Back / Forward / Reload / Home / Bookmark / Desktop / URL)
     // -------------------------------------------------------------------
 
     private fun setupToolbar() {
@@ -296,6 +404,13 @@ class BrowserActivity : AppCompatActivity() {
             }
             hideToolbar()
         }
+        findViewById<View>(R.id.btnDesktop).setOnClickListener {
+            settings.desktopMode = !settings.desktopMode
+            applyUserAgent(reload = true)
+            val message = if (settings.desktopMode) R.string.desktop_mode_on_toast else R.string.desktop_mode_off_toast
+            Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+            hideToolbar()
+        }
         findViewById<View>(R.id.btnUrl).setOnClickListener { showUrlDialog() }
     }
 
@@ -313,7 +428,6 @@ class BrowserActivity : AppCompatActivity() {
     private fun hideToolbar() {
         toolbarVisible = false
         overlayToolbar.visibility = View.GONE
-        webView.requestFocus()
     }
 
     private fun showUrlDialog() {
@@ -387,10 +501,30 @@ class BrowserActivity : AppCompatActivity() {
                         seekVideo(-10)
                         return true
                     }
+                    if (!toolbarVisible) {
+                        moveCursor(-cursorStep(event), 0f)
+                        return true
+                    }
                 }
                 KeyEvent.KEYCODE_DPAD_RIGHT -> {
                     if (isInFullscreenVideo) {
                         seekVideo(10)
+                        return true
+                    }
+                    if (!toolbarVisible) {
+                        moveCursor(cursorStep(event), 0f)
+                        return true
+                    }
+                }
+                KeyEvent.KEYCODE_DPAD_UP -> {
+                    if (!isInFullscreenVideo && !toolbarVisible) {
+                        moveCursor(0f, -cursorStep(event))
+                        return true
+                    }
+                }
+                KeyEvent.KEYCODE_DPAD_DOWN -> {
+                    if (!isInFullscreenVideo && !toolbarVisible) {
+                        moveCursor(0f, cursorStep(event))
                         return true
                     }
                 }
@@ -399,10 +533,8 @@ class BrowserActivity : AppCompatActivity() {
                         togglePlayback()
                         return true
                     }
-                }
-                KeyEvent.KEYCODE_DPAD_UP -> {
-                    if (!isInFullscreenVideo) {
-                        toggleToolbar()
+                    if (!toolbarVisible) {
+                        clickAtCursor()
                         return true
                     }
                 }
@@ -434,5 +566,7 @@ class BrowserActivity : AppCompatActivity() {
 
     companion object {
         const val EXTRA_URL = "extra_url"
+        private const val CURSOR_EDGE_MARGIN_DP = 32f
+        private const val CURSOR_HOTSPOT_OFFSET_DP = 3f
     }
 }

@@ -16,7 +16,11 @@
     <string name="menu_home">Início</string>
     <string name="menu_bookmark">Salvar atalho</string>
     <string name="menu_url">Endereço</string>
-    <string name="player_help">◀ ▶ avança/retrocede 10s · OK reproduz/pausa · ▼ mostra controles</string>
+    <string name="menu_desktop_site">Versão desktop</string>
+    <string name="player_help">◀ ▶ avança/retrocede 10s · OK reproduz/pausa · Voltar sai da tela cheia</string>
+    <string name="cursor_help">Setas movem o cursor · OK clica · Menu mostra a barra de navegação</string>
     <string name="new_bookmark_name">Nome do atalho</string>
     <string name="new_bookmark_url">Endereço (URL)</string>
+    <string name="desktop_mode_on_toast">Versão desktop ativada</string>
+    <string name="desktop_mode_off_toast">Versão desktop desativada</string>
 </resources>

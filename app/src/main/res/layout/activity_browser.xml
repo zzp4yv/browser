@@ -41,6 +41,7 @@
         <Button android:id="@+id/btnReload" style="@style/OverlayButton" android:text="@string/menu_reload" android:layout_marginStart="8dp" />
         <Button android:id="@+id/btnHome" style="@style/OverlayButton" android:text="@string/menu_home" android:layout_marginStart="8dp" />
         <Button android:id="@+id/btnBookmark" style="@style/OverlayButton" android:text="@string/menu_bookmark" android:layout_marginStart="8dp" />
+        <Button android:id="@+id/btnDesktop" style="@style/OverlayButton" android:text="@string/menu_desktop_site" android:layout_marginStart="8dp" />
         <Button android:id="@+id/btnUrl" style="@style/OverlayButton" android:text="@string/menu_url" android:layout_marginStart="8dp" android:layout_weight="1" android:ellipsize="end" android:maxLines="1" />
 
     </LinearLayout>
@@ -72,5 +73,13 @@
         android:textColor="@color/text_primary"
         android:textSize="14sp"
         android:visibility="gone" />
+
+    <ImageView
+        android:id="@+id/pointerCursor"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:src="@drawable/ic_pointer_cursor"
+        android:contentDescription="@null"
+        android:elevation="8dp" />
 
 </FrameLayout>
