@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.TvBrowser" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowBackground">@color/background</item>
+        <item name="colorPrimary">@color/accent</item>
+        <item name="colorAccent">@color/accent</item>
+        <item name="android:navigationBarColor">@color/background</item>
+        <item name="android:statusBarColor">@color/background</item>
+    </style>
+
+    <style name="Theme.TvBrowser.Browser" parent="Theme.TvBrowser">
+        <item name="android:windowFullscreen">false</item>
+    </style>
+
+    <style name="BookmarkTile">
+        <item name="android:layout_width">220dp</item>
+        <item name="android:layout_height">140dp</item>
+        <item name="android:background">@drawable/bg_tile_focusable</item>
+        <item name="android:focusable">true</item>
+        <item name="android:focusableInTouchMode">true</item>
+    </style>
+
+    <style name="OverlayButton">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">48dp</item>
+        <item name="android:minWidth">96dp</item>
+        <item name="android:background">@drawable/bg_tile_focusable</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:focusable">true</item>
+        <item name="android:paddingStart">16dp</item>
+        <item name="android:paddingEnd">16dp</item>
+    </style>
+</resources>

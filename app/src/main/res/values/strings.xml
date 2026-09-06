@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">TV Video Browser</string>
+    <string name="home_title">TV Video Browser</string>
+    <string name="open_url">Abrir endereço</string>
+    <string name="add_bookmark">Adicionar atalho</string>
+    <string name="url_hint">Digite um endereço ou termo de busca</string>
+    <string name="action_go">Ir</string>
+    <string name="action_cancel">Cancelar</string>
+    <string name="action_delete">Remover</string>
+    <string name="loading">Carregando…</string>
+    <string name="ads_blocked_format">%1$d anúncios bloqueados</string>
+    <string name="menu_back">Voltar</string>
+    <string name="menu_forward">Avançar</string>
+    <string name="menu_reload">Recarregar</string>
+    <string name="menu_home">Início</string>
+    <string name="menu_bookmark">Salvar atalho</string>
+    <string name="menu_url">Endereço</string>
+    <string name="player_help">◀ ▶ avança/retrocede 10s · OK reproduz/pausa · ▼ mostra controles</string>
+    <string name="new_bookmark_name">Nome do atalho</string>
+    <string name="new_bookmark_url">Endereço (URL)</string>
+</resources>

@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/black">
+
+    <WebView
+        android:id="@+id/webView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <FrameLayout
+        android:id="@+id/fullscreenContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@android:color/black"
+        android:visibility="gone" />
+
+    <ProgressBar
+        android:id="@+id/progressBar"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="4dp"
+        android:layout_gravity="top"
+        android:max="100"
+        android:visibility="gone" />
+
+    <LinearLayout
+        android:id="@+id/overlayToolbar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:background="@color/overlay_scrim"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="12dp"
+        android:visibility="gone">
+
+        <Button android:id="@+id/btnBack" style="@style/OverlayButton" android:text="@string/menu_back" />
+        <Button android:id="@+id/btnForward" style="@style/OverlayButton" android:text="@string/menu_forward" android:layout_marginStart="8dp" />
+        <Button android:id="@+id/btnReload" style="@style/OverlayButton" android:text="@string/menu_reload" android:layout_marginStart="8dp" />
+        <Button android:id="@+id/btnHome" style="@style/OverlayButton" android:text="@string/menu_home" android:layout_marginStart="8dp" />
+        <Button android:id="@+id/btnBookmark" style="@style/OverlayButton" android:text="@string/menu_bookmark" android:layout_marginStart="8dp" />
+        <Button android:id="@+id/btnUrl" style="@style/OverlayButton" android:text="@string/menu_url" android:layout_marginStart="8dp" android:layout_weight="1" android:ellipsize="end" android:maxLines="1" />
+
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/adsBlockedBadge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:layout_margin="16dp"
+        android:background="@drawable/bg_tile_focusable"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp"
+        android:textColor="@color/text_primary"
+        android:textSize="14sp"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/playerHelpHint"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="24dp"
+        android:background="@color/overlay_scrim"
+        android:padding="10dp"
+        android:text="@string/player_help"
+        android:textColor="@color/text_primary"
+        android:textSize="14sp"
+        android:visibility="gone" />
+
+</FrameLayout>
