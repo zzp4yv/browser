@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">TV Video Browser</string>
-    <string name="home_title">TV Video Browser</string>
+    <string name="app_name">Pala Browser</string>
+    <string name="home_title">Pala Browser</string>
     <string name="open_url">Abrir endereço</string>
     <string name="add_bookmark">Adicionar atalho</string>
     <string name="url_hint">Digite um endereço ou termo de busca</string>

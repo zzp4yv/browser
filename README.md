@@ -1,9 +1,13 @@
-# TV Video Browser
+# Pala Browser
 
 Navegador para Android TV focado em **reprodução de vídeo**, com interface limpa
 controlada 100% pelo controle remoto (D-pad) e bloqueio de anúncios/malware a
 nível de rede. Testado para funcionar bem em hardware limitado, como a
 **Xiaomi Mi Box (3ª geração, 2GB RAM / 32GB)**.
+
+O ícone do app e a paleta de cores da interface (cinza-metálico escuro com
+detalhes azul-ciano) vêm da ilustração do mecha usada como identidade visual
+do Pala Browser (`app/src/main/res/drawable-nodpi/pala_preview.png`).
 
 ## Instalação (APK compilado automaticamente)
 
@@ -12,7 +16,7 @@ projeto e publica o APK assinado na aba **[Releases](../../releases/latest)**
 do repositório. O link direto e estável de download é:
 
 ```
-https://github.com/zzp4yv/browser/releases/latest/download/TVBrowser-android-tv.apk
+https://github.com/zzp4yv/browser/releases/latest/download/PalaBrowser-android-tv.apk
 ```
 
 Como instalar na Mi Box (ou qualquer Android TV) sem precisar de PC:
@@ -21,13 +25,13 @@ Como instalar na Mi Box (ou qualquer Android TV) sem precisar de PC:
 2. Abra o Downloader e cole a URL acima para baixar o APK.
 3. Ao terminar o download, escolha "Instalar". Se pedir, habilite
    "Fontes desconhecidas" para o app Downloader/Arquivos.
-4. Pronto — o ícone "TV Video Browser" aparecerá na tela inicial.
+4. Pronto — o ícone "Pala Browser" aparecerá na tela inicial.
 
 Alternativa via ADB (a partir de um PC na mesma rede):
 
 ```
 adb connect <ip-da-mibox>:5555
-adb install -r TVBrowser-android-tv.apk
+adb install -r PalaBrowser-android-tv.apk
 ```
 
 ## Controles do remoto
@@ -49,6 +53,14 @@ invisível. O cursor sempre aparece na tela, então você sempre sabe onde está
 Ao chegar perto da borda da tela, o cursor "empurra" o conteúdo (a página
 rola) em vez de sumir de vista — assim dá para alcançar qualquer parte de
 uma página longa sem perder a posição do cursor.
+
+A detecção de "vídeo em tela cheia" cobre os dois jeitos que os players usam
+na prática: o vídeo nativo do navegador (`<video>` sem player customizado) e,
+principalmente, a Fullscreen API do próprio site com CSS (é assim que
+YouTube, Twitch, JW Player e Video.js implementam o botão de tela cheia
+deles) — o app escuta o evento `fullscreenchange` da página para saber
+quando isso acontece, então ◀ ▶ e OK continuam funcionando em qualquer um
+dos dois casos, sem precisar sair da tela cheia.
 
 Na tela inicial, use o D-pad para navegar entre os atalhos, "+" para adicionar
 um novo site e "🔎 Abrir endereço" para digitar uma URL ou termo de busca.

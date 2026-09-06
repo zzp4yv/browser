@@ -48,8 +48,8 @@ jobs:
       - name: Rename APKs
         run: |
           mkdir -p out
-          cp app/build/outputs/apk/release/app-release.apk out/TVBrowser-android-tv.apk
-          cp app/build/outputs/apk/debug/app-debug.apk out/TVBrowser-android-tv-debug.apk
+          cp app/build/outputs/apk/release/app-release.apk out/PalaBrowser-android-tv.apk
+          cp app/build/outputs/apk/debug/app-debug.apk out/PalaBrowser-android-tv-debug.apk
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -61,16 +61,16 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
-          name: TV Video Browser (latest build)
+          name: Pala Browser (latest build)
           body: |
             Build automatically compiled from commit ${{ github.sha }}.
 
             **Instalação (Xiaomi Mi Box / qualquer Android TV):**
-            1. Baixe `TVBrowser-android-tv.apk` neste release.
+            1. Baixe `PalaBrowser-android-tv.apk` neste release.
             2. Instale um app tipo "Downloader" ou "Send Files to TV" na sua TV Box (ou ative "Fontes desconhecidas" e copie o APK via pendrive/ADB).
             3. Abra o APK baixado na TV Box e confirme a instalação.
           files: |
-            out/TVBrowser-android-tv.apk
-            out/TVBrowser-android-tv-debug.apk
+            out/PalaBrowser-android-tv.apk
+            out/PalaBrowser-android-tv-debug.apk
           make_latest: true
           prerelease: false

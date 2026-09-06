@@ -12,6 +12,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
+import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
@@ -58,7 +59,15 @@ class BrowserActivity : AppCompatActivity() {
 
     private var customView: View? = null
     private var customViewCallback: WebChromeClient.CustomViewCallback? = null
-    private val isInFullscreenVideo: Boolean get() = customView != null
+
+    // Most real players (YouTube, Twitch, JW Player, Video.js...) never trigger
+    // onShowCustomView at all: they fullscreen a <div> via the Fullscreen API and
+    // resize it with CSS entirely inside the page. [pageFullscreen], reported by
+    // [FullscreenBridge] below, catches that case; customView only catches the
+    // rarer "browser takes over a bare <video>" case. D-pad seek/play-pause needs
+    // either one to be true, or it silently does nothing on almost every site.
+    private var pageFullscreen = false
+    private val isVideoFullscreen: Boolean get() = customView != null || pageFullscreen
 
     private var toolbarVisible = false
     private var cursorHintShown = false
@@ -113,8 +122,30 @@ class BrowserActivity : AppCompatActivity() {
             webView.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, true)
         }
 
+        webView.addJavascriptInterface(FullscreenBridge(), "TVBrowserBridge")
         webView.webViewClient = tvWebViewClient()
         webView.webChromeClient = tvWebChromeClient()
+    }
+
+    /** Lets injected page JS tell us about CSS/JS-driven fullscreen (see [pageFullscreen]). */
+    private inner class FullscreenBridge {
+        @JavascriptInterface
+        fun onFullscreenChange(isFullscreen: Boolean) {
+            runOnUiThread { setPageFullscreen(isFullscreen) }
+        }
+    }
+
+    private fun setPageFullscreen(isFullscreen: Boolean) {
+        if (pageFullscreen == isFullscreen) return
+        pageFullscreen = isFullscreen
+        if (isFullscreen) {
+            pointerCursor.visibility = View.GONE
+            enterImmersiveMode()
+            showHint(getString(R.string.player_help))
+        } else if (customView == null) {
+            pointerCursor.visibility = View.VISIBLE
+            exitImmersiveMode()
+        }
     }
 
     private fun applyUserAgent(reload: Boolean) {
@@ -153,6 +184,7 @@ class BrowserActivity : AppCompatActivity() {
             super.onPageStarted(view, url, favicon)
             progressBar.visibility = View.VISIBLE
             AdBlockManager.resetCounter()
+            setPageFullscreen(false) // new document: any previous page's fullscreen state is gone
         }
 
         override fun onPageFinished(view: WebView, url: String?) {
@@ -193,11 +225,13 @@ class BrowserActivity : AppCompatActivity() {
             fullscreenContainer.removeView(view)
             fullscreenContainer.visibility = View.GONE
             webView.visibility = View.VISIBLE
-            pointerCursor.visibility = View.VISIBLE
             customView = null
             customViewCallback?.onCustomViewHidden()
             customViewCallback = null
-            exitImmersiveMode()
+            if (!pageFullscreen) {
+                pointerCursor.visibility = View.VISIBLE
+                exitImmersiveMode()
+            }
         }
 
         override fun onCreateWindow(
@@ -229,22 +263,49 @@ class BrowserActivity : AppCompatActivity() {
     private fun injectPlayerHelper() {
         val js = """
             (function() {
+                function activeVideo() {
+                    var fsEl = document.fullscreenElement || document.webkitFullscreenElement;
+                    if (fsEl) {
+                        if (fsEl.tagName === 'VIDEO') { return fsEl; }
+                        var inFs = fsEl.querySelector('video');
+                        if (inFs) { return inFs; }
+                    }
+                    var videos = document.querySelectorAll('video');
+                    for (var i = 0; i < videos.length; i++) {
+                        if (!videos[i].paused && !videos[i].ended) { return videos[i]; }
+                    }
+                    return videos.length ? videos[0] : null;
+                }
                 window.__tvbrowser = {
                     seek: function(d) {
-                        var v = document.querySelector('video');
+                        var v = activeVideo();
                         if (v) { v.currentTime = Math.max(0, v.currentTime + d); }
                     },
                     toggle: function() {
-                        var v = document.querySelector('video');
+                        var v = activeVideo();
                         if (v) { if (v.paused || v.ended) { v.play(); } else { v.pause(); } }
                     },
                     pauseAll: function() {
                         document.querySelectorAll('video').forEach(function(v) { v.pause(); });
+                    },
+                    exitFullscreen: function() {
+                        if (document.exitFullscreen) { document.exitFullscreen(); }
+                        else if (document.webkitExitFullscreen) { document.webkitExitFullscreen(); }
                     }
                 };
+                function reportFullscreen() {
+                    var el = document.fullscreenElement || document.webkitFullscreenElement;
+                    if (window.TVBrowserBridge) { window.TVBrowserBridge.onFullscreenChange(!!el); }
+                }
+                document.addEventListener('fullscreenchange', reportFullscreen);
+                document.addEventListener('webkitfullscreenchange', reportFullscreen);
             })();
         """.trimIndent()
         webView.evaluateJavascript(js, null)
+    }
+
+    private fun exitPageFullscreen() {
+        webView.evaluateJavascript("window.__tvbrowser && window.__tvbrowser.exitFullscreen();", null)
     }
 
     private fun seekVideo(deltaSeconds: Int) {
@@ -327,7 +388,7 @@ class BrowserActivity : AppCompatActivity() {
     }
 
     private fun maybeShowCursorHint() {
-        if (cursorHintShown || isInFullscreenVideo) return
+        if (cursorHintShown || isVideoFullscreen) return
         cursorHintShown = true
         showHint(getString(R.string.cursor_help))
     }
@@ -471,8 +532,12 @@ class BrowserActivity : AppCompatActivity() {
         if (event.action == KeyEvent.ACTION_DOWN) {
             when (event.keyCode) {
                 KeyEvent.KEYCODE_BACK -> {
-                    if (isInFullscreenVideo) {
+                    if (customView != null) {
                         webView.webChromeClient?.onHideCustomView()
+                        return true
+                    }
+                    if (pageFullscreen) {
+                        exitPageFullscreen()
                         return true
                     }
                     if (toolbarVisible) {
@@ -497,7 +562,7 @@ class BrowserActivity : AppCompatActivity() {
                     return true
                 }
                 KeyEvent.KEYCODE_DPAD_LEFT -> {
-                    if (isInFullscreenVideo) {
+                    if (isVideoFullscreen) {
                         seekVideo(-10)
                         return true
                     }
@@ -507,7 +572,7 @@ class BrowserActivity : AppCompatActivity() {
                     }
                 }
                 KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                    if (isInFullscreenVideo) {
+                    if (isVideoFullscreen) {
                         seekVideo(10)
                         return true
                     }
@@ -517,19 +582,19 @@ class BrowserActivity : AppCompatActivity() {
                     }
                 }
                 KeyEvent.KEYCODE_DPAD_UP -> {
-                    if (!isInFullscreenVideo && !toolbarVisible) {
+                    if (!isVideoFullscreen && !toolbarVisible) {
                         moveCursor(0f, -cursorStep(event))
                         return true
                     }
                 }
                 KeyEvent.KEYCODE_DPAD_DOWN -> {
-                    if (!isInFullscreenVideo && !toolbarVisible) {
+                    if (!isVideoFullscreen && !toolbarVisible) {
                         moveCursor(0f, cursorStep(event))
                         return true
                     }
                 }
                 KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
-                    if (isInFullscreenVideo) {
+                    if (isVideoFullscreen) {
                         togglePlayback()
                         return true
                     }

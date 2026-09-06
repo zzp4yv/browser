@@ -13,5 +13,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "TV Video Browser"
+rootProject.name = "Pala Browser"
 include(":app")
